@@ -1,1 +1,0 @@
-# thptqg2025fightingg
