@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Quản Lý Học Tập & Hành Trình Khơi Dậy Cảm Hứng</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Google Fonts cho phong cách sang trọng -->
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    /* Phong cách chung */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Lato', sans-serif;
+      background-color: #f4f4f4;
+      color: #333;
+    }
+    .btn {
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      font-size: 1em;
+    }
+    .btn:hover {
+      background-color: #0056b3;
+    }
+    
+    /* --- Splash Screen --- */
+    #introSection {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100vh; /* Toàn màn hình */
+      background-image: url("https://source.unsplash.com/1600x900/?history");
+      background-repeat: no-repeat;
+      background-size: cover;
+      background-position: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      z-index: 9999;
+      padding: 20px;
+      color: #fff;
+    }
+    #introSection h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 3.5em;
+      margin-bottom: 20px;
+      text-shadow: 2px 2px 8px rgba(0,0,0,0.5);
+    }
+    /* Container chứa quotes với chiều cao cố định */
+    #quoteContainer {
+      position: relative;
+      height: 80px;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    #quoteContainer .quote {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      opacity: 0;
+      transition: opacity 1s ease;
+      font-size: 1.5em;
+      font-style: italic;
+      padding: 0 20px;
+      line-height: 80px;
+    }
+    #quoteContainer .quote.active {
+      opacity: 1;
+    }
+    #introSection p.main-text {
+      font-size: 1.2em;
+      margin-bottom: 30px;
+      max-width: 600px;
+      text-shadow: 1px 1px 6px rgba(0,0,0,0.4);
+    }
+    
+    /* --- Main Container: Giao diện nhập liệu cập nhật --- */
+    #mainContainer {
+      display: none;
+      padding: 40px;
+      background: #fff;
+      max-width: 1200px;
+      margin: 30px auto;
+      border-radius: 10px;
+      box-shadow: 0 0 12px rgba(0,0,0,0.1);
+    }
+    #mainContainer h2 {
+      font-family: 'Playfair Display', serif;
+      color: #444;
+      margin-bottom: 30px;
+      font-size: 2.5em;
+      text-align: center;
+    }
+    
+    /* --- Điều khiển & bộ lọc --- */
+    .controls {
+      margin-bottom: 30px;
+      text-align: center;
+    }
+    .controls .btn {
+      margin: 0 10px;
+      font-size: 1.1em;
+    }
+    .filter-container {
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .filter-container input,
+    .filter-container select {
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 1em;
+    }
+    
+    /* --- Bảng dữ liệu (Table) --- */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      margin-top: 10px;
+    }
+    th, td {
+      border: none;
+      padding: 15px;
+      text-align: left;
+    }
+    th {
+      background: linear-gradient(135deg, #007bff, #0056b3);
+      color: #fff;
+      font-size: 1.1em;
+    }
+    tbody tr {
+      border-bottom: 1px solid #eee;
+      transition: background 0.3s ease;
+    }
+    tbody tr:hover {
+      background: #f5f5f5;
+    }
+    tbody tr:nth-child(odd) {
+      background-color: #fafafa;
+    }
+    td[contenteditable="true"] {
+      background-color: #f9f9f9;
+    }
+    td.actions {
+      text-align: center;
+    }
+    td.actions .btn.delete {
+      padding: 8px 12px;
+      font-size: 0.9em;
+    }
+    /* Dropdown trong ô Môn học */
+    td select {
+      font-size: inherit;
+      width: 100%;
+      border: none;
+      background: transparent;
+    }
+    
+    /* --- Phần Thống Kê & Phân Tích (không đổi nhiều) --- */
+    #statsSection {
+      margin-top: 40px;
+      background: #fff;
+      border: 1px solid #ccc;
+      padding: 20px;
+      border-radius: 8px;
+    }
+    #subjectStats p {
+      margin: 5px 0;
+    }
+    canvas {
+      margin: 15px auto;
+      display: block;
+    }
+    #errorList {
+      list-style: disc;
+      padding-left: 20px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Splash Screen -->
+  <div id="introSection">
+    <h1>Chào Mừng Bạn!</h1>
+    <div id="quoteContainer">
+      <p class="quote active">"Kiến thức là sức mạnh." – Francis Bacon</p>
+      <p class="quote">"Hãy học hỏi như thể bạn sẽ sống mãi, sống như thể bạn sẽ chết ngày mai."</p>
+      <p class="quote">"Lịch sử là người thầy vĩ đại nhất của nhân loại."</p>
+      <p class="quote">"Thành công đến với những ai không ngừng nỗ lực – bắt đầu từ hôm nay."</p>
+    </div>
+    <p class="main-text">Hãy bắt đầu hành trình khai phá tri thức và khám phá tiềm năng bên trong bạn.</p>
+    <button class="btn" onclick="showMain()">Bắt đầu Học Tập</button>
+  </div>
+  
+  <!-- Main Container -->
+  <div id="mainContainer">
+    <h2>Quản Lý Học Tập & Thống Kê</h2>
+    <div class="controls">
+      <button class="btn" onclick="addRow()">Thêm Dòng Mới</button>
+      <button class="btn" onclick="saveTable()">Lưu Dữ Liệu</button>
+      <button class="btn" onclick="loadTable()">Tải Dữ Liệu</button>
+    </div>
+    <div class="filter-container">
+      <input id="searchInput" type="text" placeholder="Nhập từ khóa để tìm kiếm..." oninput="filterTable()">
+      <select id="subjectFilter" onchange="filterTable()">
+        <option value="">Tất cả môn học</option>
+        <option value="Toán">Toán</option>
+        <option value="Tiếng Anh">Tiếng Anh</option>
+        <option value="Vật Lý">Vật Lý</option>
+        <option value="Ngữ Văn">Ngữ Văn</option>
+      </select>
+    </div>
+    <table id="studyTable">
+      <thead>
+        <tr>
+          <th>Ngày</th>
+          <th>Môn học</th>
+          <th>Số đề</th>
+          <th>Điểm số</th>
+          <th>Chủ đề</th>
+          <th>Ghi chú</th>
+          <th>Hành động</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Các dòng dữ liệu sẽ được chèn tại đây -->
+      </tbody>
+    </table>
+    <div id="statsSection">
+      <h3>Phân Tích & Thống Kê</h3>
+      <div id="subjectStats"></div>
+      <canvas id="barChart" width="400" height="200"></canvas>
+      <canvas id="pieChart" width="400" height="200"></canvas>
+      <h3>Lỗi sai thường gặp</h3>
+      <ul id="errorList"></ul>
+    </div>
+  </div>
+  
+  <script>
+    // Chuyển từ Splash Screen sang Main Container
+    function showMain() {
+      document.getElementById("introSection").style.display = "none";
+      document.getElementById("mainContainer").style.display = "block";
+    }
+    
+    // Chuyển đổi các quotes trong Splash Screen
+    document.addEventListener("DOMContentLoaded", function () {
+      const quotes = document.querySelectorAll("#quoteContainer .quote");
+      let current = 0;
+      setInterval(() => {
+        quotes[current].classList.remove("active");
+        current = (current + 1) % quotes.length;
+        quotes[current].classList.add("active");
+      }, 5000);
+    });
+    
+    // Quản lý dữ liệu bảng
+    function addRow(data = {}) {
+      const tbody = document.getElementById("studyTable").getElementsByTagName("tbody")[0];
+      const row = tbody.insertRow();
+      
+      const cellDate = row.insertCell();
+      cellDate.contentEditable = "true";
+      cellDate.innerText = data.date || new Date().toLocaleDateString();
+      
+      const cellSubject = row.insertCell();
+      const subjectSelect = document.createElement("select");
+      const subjects = ["", "Toán", "Tiếng Anh", "Vật Lý", "Ngữ Văn"];
+      subjects.forEach(subj => {
+        const option = document.createElement("option");
+        option.value = subj;
+        option.text = subj ? subj : "-- Chọn môn học --";
+        if (data.subject && data.subject === subj) {
+          option.selected = true;
+        }
+        subjectSelect.appendChild(option);
+      });
+      cellSubject.appendChild(subjectSelect);
+      
+      const cellExam = row.insertCell();
+      cellExam.contentEditable = "true";
+      cellExam.innerText = data.examNumber || "";
+      
+      const cellScore = row.insertCell();
+      cellScore.contentEditable = "true";
+      cellScore.innerText = data.score || "";
+      
+      const cellCategory = row.insertCell();
+      cellCategory.contentEditable = "true";
+      cellCategory.innerText = data.category || "";
+      
+      const cellNote = row.insertCell();
+      cellNote.contentEditable = "true";
+      cellNote.innerText = data.note || "";
+      
+      const cellAction = row.insertCell();
+      cellAction.className = "actions";
+      const deleteBtn = document.createElement("button");
+      deleteBtn.className = "btn delete";
+      deleteBtn.innerText = "Xóa";
+      deleteBtn.onclick = function () {
+        if (confirm("Bạn có chắc chắn muốn xóa dòng này không?")) {
+          tbody.deleteRow(row.rowIndex - 1);
+          saveTable();
+          updateStats();
+        }
+      };
+      cellAction.appendChild(deleteBtn);
+    }
+    
+    function saveTable() {
+      const tbody = document.getElementById("studyTable").getElementsByTagName("tbody")[0];
+      let tableData = [];
+      for (let i = 0; i < tbody.rows.length; i++) {
+        let row = tbody.rows[i];
+        const subjectSelect = row.cells[1].querySelector("select");
+        let subject = subjectSelect ? subjectSelect.value : row.cells[1].innerText;
+        tableData.push({
+          date: row.cells[0].innerText,
+          subject: subject,
+          examNumber: row.cells[2].innerText,
+          score: row.cells[3].innerText,
+          category: row.cells[4].innerText,
+          note: row.cells[5].innerText
+        });
+      }
+      localStorage.setItem("studyTableData", JSON.stringify(tableData));
+      alert("Dữ liệu đã được lưu!");
+      updateStats();
+    }
+    
+    function loadTable() {
+      const storedData = JSON.parse(localStorage.getItem("studyTableData")) || [];
+      const tbody = document.getElementById("studyTable").getElementsByTagName("tbody")[0];
+      tbody.innerHTML = "";
+      storedData.forEach(rowData => {
+        addRow(rowData);
+      });
+      filterTable();
+      updateStats();
+    }
+    
+    function filterTable() {
+      let searchTerm = document.getElementById("searchInput").value.toLowerCase();
+      let subjectFilter = document.getElementById("subjectFilter").value.toLowerCase();
+      const tbody = document.getElementById("studyTable").getElementsByTagName("tbody")[0];
+      for (let i = 0; i < tbody.rows.length; i++) {
+        let row = tbody.rows[i];
+        let rowText = "";
+        for (let j = 0; j < row.cells.length - 1; j++) {
+          if (j === 1) {
+            const subjSelect = row.cells[j].querySelector("select");
+            rowText += subjSelect ? subjSelect.value.toLowerCase() + " " : "";
+          } else {
+            rowText += row.cells[j].innerText.toLowerCase() + " ";
+          }
+        }
+        const subjectCellSelect = row.cells[1].querySelector("select");
+        let subjectText = subjectCellSelect ? subjectCellSelect.value.toLowerCase() : row.cells[1].innerText.toLowerCase();
+        if ((subjectFilter && subjectText !== subjectFilter) || (searchTerm && rowText.indexOf(searchTerm) === -1)) {
+          row.style.display = "none";
+        } else {
+          row.style.display = "";
+        }
+      }
+    }
+    
+    /* --- Phần Thống Kê & Phân Tích --- */
+    let barChart;
+    let pieChart;
+    
+    function updateStats() {
+      let data = JSON.parse(localStorage.getItem("studyTableData")) || [];
+      
+      let subjects = {};
+      data.forEach(record => {
+        let subj = record.subject.trim();
+        if (subj) {
+          if (!subjects[subj]) {
+            subjects[subj] = { sum: 0, count: 0, correct: 0, wrong: 0 };
+          }
+          let score = parseFloat(record.score) || 0;
+          subjects[subj].sum += score;
+          subjects[subj].count++;
+          if (subj === "Toán" || subj === "Tiếng Anh" || subj === "Vật Lý") {
+            subjects[subj].correct += score;
+            subjects[subj].wrong += (10 - score);
+          }
+        }
+      });
+      
+      let subjectStatsDiv = document.getElementById("subjectStats");
+      subjectStatsDiv.innerHTML = "";
+      let overallSum = 0, overallCount = 0;
+      let barLabels = [];
+      let avgScoresForBar = [];
+      
+      for (let subj in subjects) {
+        let avg = subjects[subj].sum / subjects[subj].count;
+        subjectStatsDiv.innerHTML += `<p><strong>${subj}:</strong> Điểm trung bình: ${avg.toFixed(2)}. Nhận xét: ${avg >= 7 ? 'Kết quả tốt' : 'Cần cải thiện'} (Số đề: ${subjects[subj].count}).</p>`;
+        if (subj === "Toán" || subj === "Tiếng Anh" || subj === "Vật Lý") {
+          overallSum += subjects[subj].sum;
+          overallCount += subjects[subj].count;
+          barLabels.push(subj);
+          avgScoresForBar.push(avg);
+        }
+      }
+      
+      if (overallCount > 0) {
+        let overallAvg = overallSum / overallCount;
+        subjectStatsDiv.innerHTML += `<p><strong>Điểm trung bình của 3 môn:</strong> ${overallAvg.toFixed(2)}</p>`;
+      }
+      
+      generateBarChart(barLabels, avgScoresForBar);
+      
+      let totalCorrect = 0, totalWrong = 0;
+      ["Toán", "Tiếng Anh", "Vật Lý"].forEach(subj => {
+        if (subjects[subj]) {
+          totalCorrect += subjects[subj].correct;
+          totalWrong += subjects[subj].wrong;
+        }
+      });
+      generatePieChart(totalCorrect, totalWrong);
+      
+      let errorCounts = {};
+      data.forEach(record => {
+        let note = record.note.trim();
+        if (note !== "") {
+          errorCounts[note] = (errorCounts[note] || 0) + 1;
+        }
+      });
+      let errorList = document.getElementById("errorList");
+      errorList.innerHTML = "";
+      for (let note in errorCounts) {
+        if (errorCounts[note] > 1) {
+          errorList.innerHTML += `<li>${note} (${errorCounts[note]} lần)</li>`;
+        }
+      }
+      if (errorList.innerHTML === "") {
+        errorList.innerHTML = "<li>Không có lỗi sai lặp lại thường xuyên.</li>";
+      }
+    }
+    
+    function generateBarChart(labels, dataValues) {
+      const ctx = document.getElementById("barChart").getContext("2d");
+      if (barChart) {
+        barChart.destroy();
+      }
+      barChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: "Điểm trung bình",
+            data: dataValues,
+            backgroundColor: "rgba(54, 162, 235, 0.7)",
+            borderColor: "rgba(54, 162, 235, 1)",
+            borderWidth: 1
+          }]
+        },
+        options: {
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 10
+            }
+          }
+        }
+      });
+    }
+    
+    function generatePieChart(correct, wrong) {
+      const ctx = document.getElementById("pieChart").getContext("2d");
+      if (pieChart) {
+        pieChart.destroy();
+      }
+      pieChart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels: ["Đúng", "Sai"],
+          datasets: [{
+            data: [correct, wrong],
+            backgroundColor: [
+              "rgba(75, 192, 192, 0.7)",
+              "rgba(255, 99, 132, 0.7)"
+            ],
+            borderColor: [
+              "rgba(75, 192, 192, 1)",
+              "rgba(255, 99, 132, 1)"
+            ],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true
+        }
+      });
+    }
+    
+    window.onload = function() {
+      loadTable();
+    }
+  </script>
+</body>
+</html>
